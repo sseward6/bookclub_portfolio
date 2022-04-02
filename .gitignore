@@ -1,0 +1,9 @@
+venv
+.vscode
+**/bookclub/migrations
+**/.env
+bookclubreport.docx
+**/bookclub.drawio
+**/bookclub.png
+**/bookclub/__pycache__
+**/nc_bookclub/__pycache__
