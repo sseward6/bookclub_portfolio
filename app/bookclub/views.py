@@ -1,5 +1,5 @@
-from functools import partial
 from django.shortcuts import render
+from django.db.models import Max
 from django.http.response import JsonResponse
 from rest_framework.parsers import JSONParser
 from rest_framework import status
@@ -14,23 +14,13 @@ from bookclub.serializers import BookSerializer, MemberSerializer, Recommendatio
 from rest_framework.decorators import api_view
 
 # Create your views here.
-# def index(request):
-#     return render(request, "tutorials/index.html")
-
 
 #def index(request):
 #    print("------------------------- I AM HERE")
 #    queryset = Tutorial.objects.all()
 #    return render(request, "tutorials/index.html", {'tutorials': queryset})
 
-"""
-def index(request):
-        return JsonResponse(
-            {
-                'message': 'Welcome to the Book Club App!'
-            },
-            status=status.HTTP_204_NO_CONTENT)
-"""
+
 """
 class index(APIView):
     renderer_classes = [TemplateHTMLRenderer]
@@ -42,6 +32,7 @@ class index(APIView):
 """
 
 
+#  just return a message for homepage.  
 
 @api_view()
 def index(request):
@@ -54,11 +45,12 @@ def index(request):
 
 @api_view(['GET', 'POST', 'DELETE'])
 def book_list(request):
+    # get all books - if json body then use to filter results
     if request.method == 'GET':
         books = Book.objects.all()
-        print("********************************************************************got all books")
-        title=author=genre=None
         
+        title=author=genre=None
+    
         if request.data:
             print(f"request.data exists:  {request.data}")
             if "title" in request.data:
@@ -69,17 +61,12 @@ def book_list(request):
                 genre=request.data['genre']
             
         if title is not None:
-            print(f"*******************************************************************title not None -- filter")
             books = books.filter(title__icontains=title)
         
-        
         if author is not None:
-            print(f"*******************************************************************author not None -- filter")
             books = books.filter(author__icontains=author)
-    
         
         if genre is not None:
-            print(f"*******************************************************************genre not None -- filter")
             books = books.filter(genre__iexact=genre)
 
         books_serializer = BookSerializer(books, many=True)
@@ -87,6 +74,7 @@ def book_list(request):
         # 'safe=False' for objects serialization
 
     elif request.method == 'POST':
+        # add new Book
         book_data = JSONParser().parse(request)
         book_serializer = BookSerializer(data=book_data)
         if book_serializer.is_valid():
@@ -97,6 +85,7 @@ def book_list(request):
                             status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        # delete all Books
         count = Book.objects.all().delete()
         return JsonResponse(
             {
@@ -120,6 +109,7 @@ def book_detail(request, pk):
         return JsonResponse(book_serializer.data)
 
     elif request.method == 'PUT':
+        # update book
         book_data = JSONParser().parse(request)
         book_serializer = BookSerializer(book, data=book_data, partial=True)
         if book_serializer.is_valid():
@@ -129,6 +119,7 @@ def book_detail(request, pk):
                             status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        # delete single book
         book.delete()
         return JsonResponse({'message': 'Book was deleted successfully!'},
                             status=status.HTTP_204_NO_CONTENT)
@@ -141,41 +132,30 @@ def book_detail(request, pk):
 @api_view(['GET', 'POST', 'DELETE'])
 def member_list(request):
     if request.method == 'GET':
-        members = Member.objects.all()
-        print("********************************************************************got all Members")
+        # Get all members -- if json data exists use to filter
 
+        members = Member.objects.all()
         name=email=None
-        # request.GET is empty so getting any input filters from request.data
+       
         if request.data:
-            print(f"request.data exists:  {request.data}")
             if "name" in request.data:
                 name=request.data['name']
             if "email" in request.data:
                 email=request.data['email']
-            
-        else:
-            print("Null request data")
-
     
         if name is not None:
-            print(f"*******************************************************************name not None -- filter")
             members = members.filter(name__icontains=name)
         
-    
         if email is not None:
-            print(f"*******************************************************************email not None -- filter")
             members = members.filter(email__icontains=email)
     
-       
         members_serializer = MemberSerializer(members, many=True)
         return JsonResponse(members_serializer.data, safe=False)
      
 
     elif request.method == 'POST':
-        print("member post")
+        # add new member
         member_data = JSONParser().parse(request)
-        print(f"data is:  {member_data}")
-        #member_serializer = MemberSerializer(data=member_data, partial=True)
         member_serializer = MemberSerializer(data=member_data)
 
         if member_serializer.is_valid():
@@ -186,6 +166,7 @@ def member_list(request):
                             status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        # delete all members
         count = Member.objects.all().delete()
         return JsonResponse(
             {
@@ -209,6 +190,7 @@ def member_detail(request, pk):
         return JsonResponse(member_serializer.data)
 
     elif request.method == 'PUT':
+        # update member
         member_data = JSONParser().parse(request)
         member_serializer = MemberSerializer(member, data=member_data, partial=True)
         if member_serializer.is_valid():
@@ -218,6 +200,7 @@ def member_detail(request, pk):
                             status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        # delete single member
         member.delete()
         return JsonResponse({'message': 'Member was deleted successfully!'},
                             status=status.HTTP_204_NO_CONTENT)
@@ -232,10 +215,10 @@ def member_detail(request, pk):
 @api_view(['GET', 'POST', 'DELETE'])
 def recommendation_list(request):
 
-    print("Got to recommendation_list view")
     if request.method == 'GET':
+
+        # get all recommendations - if json data, use to filter
         recommendations = Recommendation.objects.all().order_by('-r_date')
-        print("********************************************************************got all Recommendations")
         
         name=title=author=genre=r_date=None
         if request.data:
@@ -266,6 +249,7 @@ def recommendation_list(request):
         return JsonResponse(recs_serializer.data, safe=False)    
 
     elif request.method == 'POST':
+        # add a recommendation
         rec_data = JSONParser().parse(request)
         rec_serializer = RecommendationSerializer(data=rec_data)
         if rec_serializer.is_valid():
@@ -276,6 +260,7 @@ def recommendation_list(request):
                             status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        # delete all recommendations
         count = Recommendation.objects.all().delete()
         return JsonResponse(
             {
@@ -285,14 +270,38 @@ def recommendation_list(request):
             status=status.HTTP_204_NO_CONTENT)
 
 
+# RECOMMENDATION DETAILS USING PRIMARY KEY
 
-#############################################################################################
-"""
+@api_view(['DELETE'])
+def recommendation_detail(request, pk):
+
+    try:
+        recommendation = Recommendation.objects.get(pk=pk)
+    except Recommendation.DoesNotExist:
+        return JsonResponse({'message': 'The recommendation does not exist'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        # delete a single recommendation
+        recommendation.delete()
+        return JsonResponse({'message': 'Member was deleted successfully!'},
+                            status=status.HTTP_204_NO_CONTENT)
+                            
+
+# LATEST RECOMMENDATIONS FOR EACH GENRE
+
 @api_view(['GET'])
-def tutorial_list_published(request):
-    tutorials = Tutorial.objects.filter(published=True)
-
+def recommendation_latest(request):
+    
     if request.method == 'GET':
-        tutorials_serializer = TutorialSerializer(tutorials, many=True)
-        return JsonResponse(tutorials_serializer.data, safe=False)
-"""
+        recommendations = Recommendation.objects.values('book__genre').annotate(latest_date=Max('r_date'))
+        books = Book.objects.all()
+        
+        result = Book.objects.none()
+        for r in recommendations:
+            rec_books = books.filter(genre__iexact=r['book__genre'], recommendation__r_date__contains=r['latest_date']).distinct()
+            result = result.union(rec_books)
+
+        result=result.order_by('genre') 
+        books_serializer = BookSerializer(result, many=True)
+        return JsonResponse(books_serializer.data, safe=False)
